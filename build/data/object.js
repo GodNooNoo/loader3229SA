@@ -3124,12 +3124,12 @@ export let autoBattle = {
         ) {
             amt *= this.items.Box_of_Spores.dustMult();
         }
-        if (game.global.fluffyExp2 >= 1466015503701000) amt *= 5; //don't even look at this line, just move on
-        if (game.talents.tier11e.purchased)
-            amt *= Math.pow(
-                game.talents.tier12e.purchased ? 1.01 : 1.005,
-                autoBattle.maxEnemyLevel - 1,
-            );
+        if (this.scruffyLvl21) amt *= 5; //don't even look at this line, just move on
+        // if (game.talents.tier11e.purchased)
+        //     amt *= Math.pow(
+        //         game.talents.tier12e.purchased ? 1.01 : 1.005,
+        //         autoBattle.maxEnemyLevel - 1,
+        //     );
         return amt;
     },
     getEnrageMult: function () {
