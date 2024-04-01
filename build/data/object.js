@@ -2459,7 +2459,7 @@ export let autoBattle = {
         Expanding_Tauntimp: {
             description:
                 "Starting after your next Portal, U2 Tauntimps will increase all Trimps gained by " +
-                prettify(game.badGuys.Tauntimp.expandingBase() * 100) +
+                "prettify(game.badGuys.Tauntimp.expandingBase() * 100) " +
                 "% per run instead of adding flat housing.",
             owned: false,
             requiredItems: 51,
