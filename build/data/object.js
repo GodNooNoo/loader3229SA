@@ -3427,7 +3427,11 @@ export let autoBattle = {
         for (let x = 0; x < effectsCount; x++) {
             let roll = getRandomIntSeeded(seed++, 0, effects.length);
             let effect = effects[roll];
-            if (!doubleResist && effect.search("Resistant") != -1) {
+            if (
+                !doubleResist &&
+                effect.search("Resistant") != -1 &&
+                level < 144
+            ) {
                 let offset = level % 3;
                 roll = getRandomIntSeeded(seed++, 0, 100);
                 if (roll >= 40) {
@@ -3463,6 +3467,7 @@ export let autoBattle = {
                     break;
                 case "Poison Resistant":
                     effects.splice(effects.indexOf(effect), 1);
+                    if (level >= 144) break;
                     if (
                         !doubleResist ||
                         selectedEffects.indexOf("Bleed Resistant") != -1
@@ -3476,6 +3481,7 @@ export let autoBattle = {
                     break;
                 case "Bleed Resistant":
                     effects.splice(effects.indexOf(effect), 1);
+                    if (level >= 144) break;
                     if (
                         !doubleResist ||
                         selectedEffects.indexOf("Poison Resistant") != -1
@@ -3489,6 +3495,7 @@ export let autoBattle = {
                     break;
                 case "Shock Resistant":
                     effects.splice(effects.indexOf(effect), 1);
+                    if (level >= 144) break;
                     if (
                         !doubleResist ||
                         selectedEffects.indexOf("Bleed Resistant") != -1
