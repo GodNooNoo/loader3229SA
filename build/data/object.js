@@ -1902,7 +1902,7 @@ export let autoBattle = {
                     prettify((1 - this.attackTime()) * 100) +
                     "% Attack Time, +" +
                     prettify(this.resist()) +
-                    " to all Resists, and +" +
+                    "% to all Resists, and +" +
                     prettify(this.lifesteal() * 100) +
                     "% Lifesteal per 10% Huffy or Enemy status chance lost.");
             },
@@ -2292,7 +2292,7 @@ export let autoBattle = {
             useShards: true,
         },
         Burstier: {
-            description: "Gamma Burst now triggers at 4 stacks.",
+            description: "Gamma Burst requires 1 fewer attack before triggering.",
             owned: false,
             requiredItems: 48,
             useShards: true,
@@ -2512,19 +2512,16 @@ export let autoBattle = {
             return 1;
         return Math.pow(this.enemy.berserkMod, Math.floor(this.enemy.berserkStack / this.enemy.berserkEvery));
     },
-    rollDamage: function (attacker, luck = false) {
+    rollDamage: function (attacker) {
         var baseAttack = this.getAttack(attacker);
         var attack = baseAttack * 0.2;
         var roll = Math.floor(Math.random() * 201);
-        if (luck) {
-            roll = 100 + luck * 100;
-        }
         roll -= 100;
         roll /= 100;
         return baseAttack + attack * roll;
     },
-    attack: function (attacker, defender, luck = 0) {
-        var damage = this.rollDamage(attacker, luck);
+    attack: function (attacker, defender) {
+        var damage = this.rollDamage(attacker);
         var shockMod = 1;
         if (defender.shock.time > 0) {
             shockMod = 1 + defender.shock.mod;
@@ -2684,6 +2681,8 @@ export let autoBattle = {
         seed += 100 * this.enemyLevel;
         if (this.enemyLevel >= 51)
             seed += 3125; //Generated with Shold brain RNG
+        if (this.enemyLevel >= 144)
+            seed += 11; //new upd
         var doubleResist = true;
         if (this.enemyLevel > 50) {
             doubleResist = getRandomIntSeeded(seed++, 0, 100);
@@ -2718,7 +2717,9 @@ export let autoBattle = {
         for (var x = 0; x < effectsCount; x++) {
             var roll = getRandomIntSeeded(seed++, 0, effects.length);
             var effect = effects[roll];
-            if (!doubleResist && effect.search("Resistant") != -1) {
+            if (!doubleResist &&
+                effect.search("Resistant") != -1 &&
+                this.enemyLevel < 144) {
                 var offset = this.enemyLevel % 3;
                 roll = getRandomIntSeeded(seed++, 0, 100);
                 if (roll >= 40) {
@@ -2791,6 +2792,8 @@ export let autoBattle = {
                 case "Poison Resistant":
                     this.enemy.poisonResist += 10 * this.enemyLevel;
                     effects.splice(effects.indexOf(effect), 1);
+                    if (this.enemyLevel >= 144)
+                        break;
                     if (!doubleResist ||
                         selectedEffects.indexOf("Bleed Resistant") != -1)
                         effects.splice(effects.indexOf("Shock Resistant"), 1);
@@ -2801,6 +2804,8 @@ export let autoBattle = {
                 case "Bleed Resistant":
                     this.enemy.bleedResist += 10 * this.enemyLevel;
                     effects.splice(effects.indexOf(effect), 1);
+                    if (this.enemyLevel >= 144)
+                        break;
                     if (!doubleResist ||
                         selectedEffects.indexOf("Poison Resistant") != -1)
                         effects.splice(effects.indexOf("Shock Resistant"), 1);
@@ -2811,6 +2816,8 @@ export let autoBattle = {
                 case "Shock Resistant":
                     this.enemy.shockResist += 10 * this.enemyLevel;
                     effects.splice(effects.indexOf(effect), 1);
+                    if (this.enemyLevel >= 144)
+                        break;
                     if (!doubleResist ||
                         selectedEffects.indexOf("Bleed Resistant") != -1)
                         effects.splice(effects.indexOf("Poison Resistant"), 1);
@@ -2893,7 +2900,6 @@ export let autoBattle = {
     trimpDied: function () {
         this.sessionTrimpsKilled++;
         this.lootAvg.counter += this.battleTime;
-        this.onTrimpDied(); // notify controller
         this.resetCombat();
     },
     getDustMult: function () {
@@ -2910,6 +2916,12 @@ export let autoBattle = {
             if (u2Mutations.tree.Dust2.purchased) {
                 mutMult += 0.25;
             }
+            if (u2Mutations.tree.Dust3.purchased) {
+                mutMult += 3.5;
+            }
+            if (u2Mutations.tree.Dust4.purchased) {
+                mutMult += 5;
+            }
             amt *= mutMult;
         }
         if (this.items.Box_of_Spores.equipped &&
@@ -2919,6 +2931,11 @@ export let autoBattle = {
         }
         if (this.scruffyLvl21)
             amt *= 5; //don't even look at this line, just move on
+        // if (game.talents.tier11e.purchased)
+        //     amt *= Math.pow(
+        //         game.talents.tier12e.purchased ? 1.01 : 1.005,
+        //         autoBattle.maxEnemyLevel - 1,
+        //     );
         return amt;
     },
     getEnrageMult: function () {
@@ -2932,11 +2949,12 @@ export let autoBattle = {
             Math.pow(1.19, this.enemy.level - 1);
         if (this.enemy.level >= 50)
             amt *= Math.pow(1.1, this.enemy.level - 49);
+        if (this.enemy.level >= 144)
+            amt *= 3;
         amt *= this.getDustMult();
         return amt;
     },
     enemyDied: function () {
-        //this.notes += "Enemy Died. "
         this.sessionEnemiesKilled++;
         var amt = this.getDustReward();
         this.dust += amt;
@@ -2954,6 +2972,7 @@ export let autoBattle = {
         this.resetCombat();
     },
     nextLevelCount: function () {
+        // if (game.talents.tier12e.purchased) return this.enemyLevel + 1;
         if (this.enemyLevel < 20)
             return 10 * this.enemyLevel;
         return 190 + 15 * (this.enemyLevel - 19);
@@ -3082,6 +3101,7 @@ export let autoBattle = {
         var amt = Math.floor((this.rings.level - 5) / 10) + 1;
         if (amt > 2)
             amt = 2;
+        // if (game.talents.tier12e.purchased) amt++;
         return amt;
     },
     levelRing: function () {
@@ -3194,6 +3214,8 @@ export let autoBattle = {
         seed += 100 * level;
         if (level >= 51)
             seed += 3125; //Generated with Shold brain RNG
+        if (level >= 144)
+            seed += 11; //new upd
         let doubleResist = true;
         if (level > 50) {
             doubleResist = getRandomIntSeeded(seed++, 0, 100);
@@ -3226,7 +3248,9 @@ export let autoBattle = {
         for (let x = 0; x < effectsCount; x++) {
             let roll = getRandomIntSeeded(seed++, 0, effects.length);
             let effect = effects[roll];
-            if (!doubleResist && effect.search("Resistant") != -1) {
+            if (!doubleResist &&
+                effect.search("Resistant") != -1 &&
+                level < 144) {
                 let offset = level % 3;
                 roll = getRandomIntSeeded(seed++, 0, 100);
                 if (roll >= 40) {
@@ -3266,6 +3290,8 @@ export let autoBattle = {
                     break;
                 case "Poison Resistant":
                     effects.splice(effects.indexOf(effect), 1);
+                    if (level >= 144)
+                        break;
                     if (!doubleResist ||
                         selectedEffects.indexOf("Bleed Resistant") != -1)
                         effects.splice(effects.indexOf("Shock Resistant"), 1);
@@ -3275,6 +3301,8 @@ export let autoBattle = {
                     break;
                 case "Bleed Resistant":
                     effects.splice(effects.indexOf(effect), 1);
+                    if (level >= 144)
+                        break;
                     if (!doubleResist ||
                         selectedEffects.indexOf("Poison Resistant") != -1)
                         effects.splice(effects.indexOf("Shock Resistant"), 1);
@@ -3284,6 +3312,8 @@ export let autoBattle = {
                     break;
                 case "Shock Resistant":
                     effects.splice(effects.indexOf(effect), 1);
+                    if (level >= 144)
+                        break;
                     if (!doubleResist ||
                         selectedEffects.indexOf("Bleed Resistant") != -1)
                         effects.splice(effects.indexOf("Poison Resistant"), 1);
@@ -3323,114 +3353,6 @@ export let autoBattle = {
             profile.set(selectedEffects[x], selectedEffectsCount[x]);
         }
         return profile;
-    },
-    // Function to simulate max/min luck.
-    oneFight: function (luck) {
-        this.resetCombat();
-        while (this.trimp.health > 0 || this.enemy.health > 0) {
-            this.battleTime += this.frameTime;
-            this.enemy.maxHealth = this.enemy.baseHealth;
-            this.trimp.maxHealth = this.trimp.baseHealth;
-            this.enemy.attackSpeed = this.enemy.baseAttackSpeed;
-            this.trimp.attackSpeed = this.trimp.baseAttackSpeed;
-            this.trimp.attack = this.trimp.baseAttack;
-            this.enemy.attack = this.enemy.baseAttack;
-            this.trimp.shockChance = 0;
-            this.trimp.shockMod = 0;
-            this.trimp.shockTime = 0;
-            this.trimp.bleedChance = 0;
-            this.trimp.bleedMod = 0;
-            this.trimp.bleedTime = 0;
-            this.trimp.poisonChance = 0;
-            this.trimp.poisonTime = 0;
-            this.trimp.poisonMod = 0;
-            this.trimp.poisonStack = 2;
-            this.trimp.poisonTick = 1000;
-            this.trimp.poisonHeal = 0;
-            this.trimp.shockResist = 0;
-            this.trimp.poisonResist = 0;
-            this.trimp.bleedResist = 0;
-            this.trimp.defense = 0;
-            this.trimp.lifesteal = 0;
-            this.trimp.damageTakenMult = 1;
-            this.trimp.slowAura = 1;
-            this.trimp.dustMult = 0;
-            this.checkItems();
-            for (let mod of ["bleed", "poison", "shock"]) {
-                let chance = mod + "Chance";
-                let res = mod + "Resist";
-                let tchance = this.trimp[chance] - this.enemy[res];
-                if (tchance > 0 && tchance < 100) {
-                    this.trimp[chance] = this.enemy[res] + 100 * luck;
-                }
-                let echance = this.enemy[chance] - this.trimp[res];
-                if (echance > 0 && echance < 100) {
-                    this.enemy[chance] = this.trimp[res] + -100 * luck;
-                }
-            }
-            if (this.enemy.ethChance > 0) {
-                this.enemy.ethChance = luck === -1 ? 100 : 0;
-            }
-            var trimpAttackTime = this.trimp.attackSpeed;
-            this.enemy.lastAttack += this.frameTime;
-            this.trimp.lastAttack += this.frameTime;
-            if (this.trimp.lastAttack >= trimpAttackTime) {
-                this.trimp.lastAttack -= trimpAttackTime;
-                this.attack(this.trimp, this.enemy, luck);
-            }
-            this.checkPoison(this.trimp);
-            if (this.trimp.bleed.time > 0)
-                this.trimp.bleed.time -= this.frameTime;
-            if (this.trimp.shock.time > 0)
-                this.trimp.shock.time -= this.frameTime;
-            if (this.enemy.health <= 0) {
-                this.enemyDied();
-                return this.enemy;
-            }
-            if (this.trimp.health <= 0) {
-                this.trimpDied();
-                return this.trimp;
-            }
-            var enemyAttackTime = this.enemy.attackSpeed;
-            if (this.enemy.lastAttack >= enemyAttackTime) {
-                this.enemy.lastAttack -= enemyAttackTime;
-                this.attack(this.enemy, this.trimp, luck * -1);
-            }
-            if (!this.enemy.noSlow)
-                this.enemy.attackSpeed *= this.trimp.slowAura;
-            var enemyAttackTime = this.enemy.attackSpeed;
-            if (this.enemy.lastAttack >= enemyAttackTime) {
-                this.enemy.lastAttack -= enemyAttackTime;
-                this.attack(this.enemy, this.trimp);
-            }
-            if (this.enemy.explodeFreq != -1) {
-                this.enemy.lastExplode += this.frameTime;
-                if (this.enemy.lastExplode >= this.enemy.explodeFreq) {
-                    this.enemy.lastExplode -= this.enemy.explodeFreq;
-                    var dmg = this.enemy.explodeDamage * this.getAttack(this.enemy) -
-                        this.trimp.defense;
-                    this.damageCreature(this.trimp, dmg);
-                }
-            }
-            this.checkPoison(this.enemy);
-            if (this.enemy.bleed.time > 0)
-                this.enemy.bleed.time -= this.frameTime;
-            if (this.enemy.shock.time > 0 && this.enemy.shock.time != 9999999)
-                this.enemy.shock.time -= this.frameTime;
-            if (this.trimp.health > this.trimp.maxHealth)
-                this.trimp.health = this.trimp.maxHealth;
-            if (this.enemy.health > this.enemy.maxHealth)
-                this.enemy.health = this.enemy.maxHealth;
-            if (this.trimp.health <= 0) {
-                this.trimpDied();
-                return this.trimp;
-            }
-            if (this.enemy.health <= 0) {
-                this.enemyDied();
-                return this.enemy;
-            }
-        }
-        return "error?";
     },
 };
 /*

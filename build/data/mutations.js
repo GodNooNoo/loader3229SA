@@ -16,5 +16,19 @@ export let u2Mutations = {
             description: "Huffy earns an additional 25% Dust from all sources.",
             purchased: false,
         },
+        Dust3: {
+            pos: [0, 0],
+            dn: "Dusty II",
+            color: "blue",
+            description: "Huffy earns an additional 350% Dust from all sources.",
+            purchased: false,
+        },
+        Dust4: {
+            pos: [0, 0],
+            dn: "Dustier II",
+            color: "blue",
+            description: "Huffy earns an additional 500% Dust from all sources.",
+            purchased: false,
+        },
     },
 };
